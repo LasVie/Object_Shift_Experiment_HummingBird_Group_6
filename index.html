@@ -1,18 +1,23 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Visual Perception Experiment</title>
 
-  <!-- Include jsPsych core and the needed plugin -->
+  <!-- Include jsPsych core and plugins -->
   <script src="jspsych/dist/jspsych.js"></script>
   <script src="jspsych/dist/plugin-html-button-response.js"></script>
-  <!-- Include the default jsPsych CSS for basic styling -->
+  <script src="jspsych/dist/plugin-call-function.js"></script>
+
+  <!-- Default jsPsych styling -->
   <link href="jspsych/dist/jspsych.css" rel="stylesheet" type="text/css" />
 
   <style>
-    p { text-align: justify; }
+    /* =================  ORIGINAL CSS  ================= */
+    p {
+      text-align: justify;
+    }
 
-    /* University logo */
     .university-logo {
       position: absolute;
       top: 10px;
@@ -20,7 +25,6 @@
       height: 60px;
     }
 
-    /* Welcome text container */
     .welcome-container {
       margin-top: 20px;
       margin-left: 100px;
@@ -28,7 +32,6 @@
       text-align: left;
     }
 
-    /* Demo/Experiment image styling */
     .demo-image {
       max-width: 45vw;
       max-height: calc(100vh - 150px);
@@ -36,22 +39,21 @@
       height: auto;
     }
 
-    /* jsPsych button styling */
     .jspsych-btn {
       font-weight: bold;
       font-size: 20px;
-      background-color: #4CAF50;
-      color: white;
+      background: #4CAF50;
+      color: #fff;
       border: none;
       border-radius: 4px;
       padding: 10px 20px;
       cursor: pointer;
     }
+
     .jspsych-btn:hover {
-      background-color: #45a049;
+      background: #45a049;
     }
 
-    /* Fixed container for YES button */
     #yes-button-container {
       position: fixed;
       bottom: 0;
@@ -59,27 +61,25 @@
       z-index: 1000;
     }
 
-    /* Fullscreen overlay */
     #fullscreen-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(128,128,128,0.7);
+      inset: 0;
+      background: rgba(128, 128, 128, .7);
       z-index: 10000;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+
     #fullscreen-overlay .prompt-box {
-      background-color: white;
+      background: #fff;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      text-align: center;
+      box-shadow: 0 0 10px rgba(0, 0, 0, .5);
       max-width: 90%;
+      text-align: center;
     }
+
     #fullscreen-overlay button {
       font-size: 16px;
       margin: 10px;
@@ -88,39 +88,42 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    #fullscreen-overlay button:hover { opacity: 0.9; }
 
-    /* Loading screen styles */
+    #fullscreen-overlay button:hover {
+      opacity: 0.9;
+    }
+
     .loading-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       margin-top: 50px;
     }
+
     .loading-container p {
       font-size: 24px;
       margin-bottom: 10px;
     }
+
     .progress-bar-container {
       width: 300px;
       height: 20px;
-      background-color: #eee;
+      background: #eee;
       border-radius: 10px;
-      margin: 0 auto;
       overflow: hidden;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, .2);
     }
+
     .progress-bar {
       height: 100%;
       width: 0%;
-      background-color: #007bff;
+      background: #007bff;
       border-radius: 10px;
-      transition: width 0.2s ease-in-out;
+      transition: width .2s;
     }
 
-    /* Circular progress indicator at bottom left (smaller circle) */
     #progress-circle {
       position: fixed;
       bottom: 10px;
@@ -133,7 +136,6 @@
       display: none;
     }
 
-    /* Center the stimulus and button in one column */
     .jspsych-html-button-response-stimulus,
     #jspsych-html-button-response-btngroup {
       display: flex;
@@ -142,194 +144,116 @@
       justify-content: center;
     }
 
-    /* -------- NEW: Hide seek bar on first play -------- */
-    /* Chromium / Edge / Safari */
     video.no-progress::-webkit-media-controls-timeline,
     video.no-progress::-webkit-media-controls-current-time-display,
     video.no-progress::-webkit-media-controls-time-remaining-display {
       display: none !important;
     }
-    /* Firefox */
+
     video.no-progress::-moz-range-track {
       visibility: hidden !important;
     }
+
+    /* ---- ZOOM-VIOLATION OVERLAY ---- */
+    #zoom-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(128, 128, 128, .7);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #zoom-overlay .prompt-box {
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, .4);
+      max-width: 90%;
+      text-align: center;
+    }
+
+    #zoom-overlay button {
+      margin: 12px 10px 0;
+      padding: 8px 18px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #zoom-overlay button:hover {
+      opacity: .9;
+    }
   </style>
 
-  <!-- -----------------------------------------------------------
-       NEW helper script (replaces the old “mTurk Integration” block)
-  ----------------------------------------------------------- -->
+  <!-- ---------- Worker-ID helpers ---------- -->
   <script>
-    /* Generate n random digits */
-    function generateRandomDigits(n) {
-      let out = '';
-      for (let i = 0; i < n; i++) out += Math.floor(Math.random() * 10);
-      return out;
-    }
-
-    /* Build participant-ID in the form  WorkerID@day*25#### */
-    function buildParticipantID(workerId) {
-      const today      = new Date().getDate();          // 1–31
-      const uniquePart = (today * 25) + generateRandomDigits(4);
-      return `${workerId}@${uniquePart}`;
-    }
+    function generateRandomDigits(n) { let s = ''; for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 10); return s; }
+    function buildParticipantID(id) { const d = new Date().getDate(); return `${id}@${d * 25 + generateRandomDigits(4)}`; }
   </script>
 </head>
 
 <body>
-  <!-- Container for YES button -->
   <div id="yes-button-container"></div>
-  <!-- Circular progress indicator -->
   <div id="progress-circle"></div>
 
   <script>
-    /*********************************************************
-     * GLOBAL VARIABLES & HELPER FUNCTIONS
-     *********************************************************/
-    var yesClickEvents = [];
-    function clearYesClickEvents() { yesClickEvents = []; }
+    /********* GLOBALS & FULLSCREEN-EXIT HANDLER *********/
+    var yesClickEvents = []; function clearYesClickEvents() { yesClickEvents = []; }
     var demoPaused = false;
+    window.demoPixelShift = null;
+    var demoVideoStartTime = 0, demoVideoWatchTime = 0;
 
-    // NEW GLOBAL FOR DEMO PIXEL-SHIFT
-    window.demoPixelShift = null;            // ← added
+    function pauseAwareTimeout(cb, d) { setTimeout(function f() { demoPaused ? setTimeout(f, 100) : cb(); }, d); }
+    function parseShiftFromFilename(u) { const m = u.match(/_(L|R|U|D)(\d+)px/); return m ? { direction: m[1], shift: +m[2] } : { direction: null, shift: 0 }; }
 
-    // NEW GLOBAL VARIABLES FOR VIDEO WATCH TIME
-    var demoVideoStartTime = 0;   // store Date.now() when user arrives on the demo video
-    var demoVideoWatchTime = 0;   // number of seconds user actually watched
+    var jsPsych = initJsPsych({ override_safe_mode: true, experiment_width: 1000 });
 
-    function pauseAwareTimeout(callback, delay) {
-      setTimeout(function waitForResume() {
-        if (demoPaused) { setTimeout(waitForResume, 100); }
-        else { callback(); }
-      }, delay);
-    }
-
-    function parseShiftFromFilename(url) {
-      var match = url.match(/_(L|R|U|D)(\d+)px/);
-      if (!match) return { direction: null, shift: 0 };
-      return { direction: match[1], shift: parseInt(match[2], 10) };
-    }
-
-    var jsPsych = initJsPsych({
-      override_safe_mode: true,
-      experiment_width: 1000
-    });
-
-    document.addEventListener("fullscreenchange", function () {
+    document.addEventListener('fullscreenchange', function () {
       if (!document.fullscreenElement) {
         demoPaused = true;
-        var overlay = document.createElement("div");
-        overlay.id = "fullscreen-overlay";
-
-        var promptBox = document.createElement("div");
-        promptBox.className = "prompt-box";
-
-        var message = document.createElement("p");
-        message.innerHTML = `
-          You have exited full screen mode.<br><br>
-          Press <strong>Resume</strong> to re-enter full screen, or 
-          <strong>Quit</strong> to return to the main screen (all progress lost!).
-        `;
-        promptBox.appendChild(message);
-
-        var btnQuit = document.createElement("button");
-        btnQuit.textContent = "Quit";
-        btnQuit.style.backgroundColor = "#d9534f";
-        btnQuit.style.color = "white";
-        btnQuit.onclick = function () {
-          if (document.getElementById("fullscreen-overlay")) {
-            document.body.removeChild(overlay);
-          }
-          window.location.reload();
+        const ov = document.createElement('div'); ov.id = 'fullscreen-overlay';
+        const box = document.createElement('div'); box.className = 'prompt-box';
+        box.innerHTML = 'You have exited full screen mode.<br><br>\
+                       Press <strong>Resume</strong> to re-enter full screen, or \
+                       <strong>Quit</strong> to return to the main screen (all progress lost!).';
+        const q = document.createElement('button'); q.textContent = 'Quit';
+        q.style.background = '#d9534f'; q.style.color = '#fff';
+        q.onclick = () => { document.body.removeChild(ov); window.location.reload(); };
+        const r = document.createElement('button'); r.textContent = 'Resume';
+        r.style.background = '#5cb85c'; r.style.color = '#fff';
+        r.onclick = () => {
+          document.body.removeChild(ov);
+          document.documentElement.requestFullscreen().then(() => { demoPaused = false; jsPsych.resumeExperiment?.(); });
         };
-
-        var btnResume = document.createElement("button");
-        btnResume.textContent = "Resume";
-        btnResume.style.backgroundColor = "#5cb85c";
-        btnResume.style.color = "white";
-        btnResume.onclick = function () {
-          if (document.getElementById("fullscreen-overlay")) {
-            document.body.removeChild(overlay);
-          }
-          document.documentElement.requestFullscreen().then(function () {
-            demoPaused = false;
-            if (typeof jsPsych.resumeExperiment === "function") {
-              jsPsych.resumeExperiment();
-            }
-          }).catch(function (err) {
-            console.error("Error re-entering full screen:", err);
-          });
-        };
-
-        promptBox.appendChild(btnQuit);
-        promptBox.appendChild(btnResume);
-
-        overlay.appendChild(promptBox);
-        document.body.appendChild(overlay);
-
-        if (typeof jsPsych.pauseExperiment === "function") {
-          jsPsych.pauseExperiment();
-        }
+        box.appendChild(q); box.appendChild(r); ov.appendChild(box); document.body.appendChild(ov); jsPsych.pauseExperiment?.();
       }
     });
   </script>
 
+  <!-- ---------- Stimulus lists & filename-cache ---------- -->
   <script>
-    var objectNames = [
-      //"Book Shelves", "Chess", "Wheel", "Food Platter", "Fruits", "Humming Bird", "Plant", "Swing", "Vase", 
-      "Wood"
-    ];
-    var groups = {
-      //"Group1": ["Center_100%_Plain", "Center_100%_LowContrast"],
-      //"Group2": ["Left_100%_Plain", "Right_100%_Plain"],
-      //"Group3": ["Up_100%_Plain", "Down_100%_Plain"],
-      //"Group4": ["Center_125%_Plain", "Center_75%_Plain"],
-      "Group5": ["Center_100%_PatternHoriz", "Center_100%_PatternVert", "Center_100%_Messy"]
-    };
+    var objectNames = ["Wood"];
+    var groups = { "Group5": ["Center_100%_PatternHoriz", "Center_100%_PatternVert", "Center_100%_Messy"] };
+    function getRandomElement(a) { return a[Math.floor(Math.random() * a.length)]; }
 
-    function getRandomElement(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
-  </script>
-
-  <script>
-    // CACHING FOR IMAGE FILENAMES
-    window._allFilenamesPromise = null;
-    window._filenameListCache = {};
-
-    function fetchImageFilenames(searchKey) {
-      // 1) Lazy-load the full JSON exactly once:
+    window._allFilenamesPromise = null; window._filenameListCache = {};
+    function fetchImageFilenames(key) {
       if (!window._allFilenamesPromise) {
-        window._allFilenamesPromise = fetch(
-          "https://lasvientuexperimentdata.s3.ap-southeast-1.amazonaws.com/Rendered+Images/filenames.json",
-          { cache: "force-cache" }
-        )
-        .then(response => {
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          return response.json();
-        });
+        window._allFilenamesPromise = fetch("https://lasvientuexperimentdata.s3.ap-southeast-1.amazonaws.com/Rendered+Images/filenames.json", { cache: "force-cache" })
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
       }
-
-      // 2) If we've already filtered for this key, return the cached array:
-      if (window._filenameListCache[searchKey]) {
-        return Promise.resolve(window._filenameListCache[searchKey]);
-      }
-
-      // 3) Otherwise filter & sort once, cache the result, and return it:
-      return window._allFilenamesPromise
-        .then(data => {
-          const matching = data
-            .filter(file => file.name.includes(searchKey))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(file => file.name);
-          window._filenameListCache[searchKey] = matching;
-          return matching;
-        });
+      if (window._filenameListCache[key]) return Promise.resolve(window._filenameListCache[key]);
+      return window._allFilenamesPromise.then(d => {
+        const match = d.filter(f => f.name.includes(key)).sort((a, b) => a.name.localeCompare(b.name)).map(f => f.name);
+        window._filenameListCache[key] = match; return match;
+      });
     }
   </script>
 
-  <!-- =======================================================
-       1) Welcome Page  (***FIX applied here***)
-  ======================================================= -->
+  <!-- ================== 1) Welcome Page ================== -->
   <script>
     var welcomePage = {
       type: jsPsychHtmlButtonResponse,
@@ -364,9 +288,9 @@
       `,
       choices: ['Continue'],
 
-      /* ---------- NEW SAFER HANDLER ---------- */
-      on_load: function() {
-        const btn     = document.querySelector(".jspsych-btn");
+      /* ---------- SAFER HANDLER ---------- */
+      on_load: function () {
+        const btn = document.querySelector(".jspsych-btn");
         const idInput = document.getElementById("worker-id-input");
         const deviceC = document.getElementById("device-confirm");
 
@@ -374,20 +298,18 @@
           btn.disabled = !(deviceC.checked && idInput.value.trim().length);
         }
         btn.disabled = true;
-        idInput.addEventListener("input",  toggleButton);
+        idInput.addEventListener("input", toggleButton);
         deviceC.addEventListener("change", toggleButton);
 
-        /*  FIX ▲ capture Worker-ID while the element exists  */
-        btn.addEventListener("click", () => {                       // FIX ▲
-          const workerId = idInput.value.trim();                    // FIX ▲
-          window.participantID = buildParticipantID(workerId);      // FIX ▲
-        });                                                         // FIX ▲
+        btn.addEventListener("click", () => {
+          const workerId = idInput.value.trim();
+          window.participantID = buildParticipantID(workerId);
+        });
       },
 
-      /* ---------- DOM is gone here, so no element access ---------- */
-      on_finish: function() {
+      on_finish: function () {
         if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(function(err) {
+          document.documentElement.requestFullscreen().catch(function (err) {
             console.error("Error attempting to enable full screen:", err);
           });
         }
@@ -395,8 +317,338 @@
     };
   </script>
 
-  <!-- (all remaining sections are **identical** to your original;
-       no lines have been removed or shortened) -->
+  <!-- ================== 2) Browser-Zoom Verification ================= -->
+  <script>
+    function zoomPct() { const dpr = window.devicePixelRatio || 1; return (dpr / 1.25) * 100; }
+
+    var zoomCheckTrial = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: function () {
+        const pct = zoomPct(), ok = pct >= 95 && pct <= 105;
+        return `
+          <h2 style="text-align:center;margin-top:10px;">Browser&nbsp;Zoom&nbsp;Check</h2>
+          <p style="text-align:center;font-size:22px;margin:20px 0;">
+             Current&nbsp;zoom&nbsp;:&nbsp;<b>${pct.toFixed(1)}&nbsp;%</b>
+             ${ok ? '<span style="color:#28a745;font-weight:bold;">PASS</span>' :
+            '<span style="color:#dc3545;font-weight:bold;">FAIL</span>'}
+          </p>
+          <p style="max-width:800px;margin:0 auto;font-size:15px;text-align:left;">
+             The experiment must run at <b>exactly 100&nbsp;% browser&nbsp;zoom</b>.
+             ${ok ? 'Great—no change needed.' :
+            'Press <kbd>Ctrl + 0</kbd> (Windows) or <kbd>⌘ 0</kbd> (Mac) or use the browser menu to reset the zoom, then click Re-check.'}
+          </p>`;
+      },
+      choices: ['Re-check', 'Continue'],
+      on_load: function () {
+        const pct = zoomPct(), ok = pct >= 95 && pct <= 105, btns = document.querySelectorAll('.jspsych-btn');
+        if (ok) {
+          btns[0].style.display = 'none'; btns[1].style.display = 'none';
+          setTimeout(() => jsPsych.finishTrial({ zoom: pct }), 400);
+        }
+        else { btns[1].disabled = true; btns[1].style.opacity = '.4'; }
+      },
+      on_finish: data => data.zoom = zoomPct()
+    };
+
+    var zoomCheckLoop = {
+      timeline: [zoomCheckTrial],
+      loop_function: function (data) {
+        const last = data.values().at(-1); return (last.zoom < 95 || last.zoom > 105) && last.response === 0;
+      }
+    };
+  </script>
+
+  <!-- ================= 3) Live ZOOM-/RES-GUARD (auto-resume, hard pause) ================ -->
+  <script>
+    /* create once */
+    let guardStarted = false;
+
+    function startZoomGuard() {
+      if (guardStarted) return;
+      guardStarted = true;
+
+      /* ── helper: are both zoom & resolution within limits? ── */
+      function ok() {
+        const dpr = window.devicePixelRatio || 1;
+
+        /* browser zoom   (≈100 % ±5 %)  */
+        const zoomPct = (dpr / 1.25) * 100;
+        const zoomOK = zoomPct >= 95 && zoomPct <= 105;
+
+        /* monitor native res @ 125 % OS-scaling */
+        const sw = Math.round(screen.width * dpr);
+        const sh = Math.round(screen.height * dpr);
+        const resOK = (sw >= 2500 && sw <= 2620) &&
+          (sh >= 1400 && sh <= 1650) &&
+          (dpr >= 1.20 && dpr <= 1.30);
+
+        return zoomOK && resOK;
+      }
+
+      /* ── overlay (no buttons) ── */
+      let overlay = null;
+      function show() {
+        if (overlay) return;
+        overlay = document.createElement('div');
+        overlay.id = 'zoom-overlay';   /* uses existing grey+centered CSS */
+        overlay.innerHTML = `
+        <div class="prompt-box">
+          <h3>Display settings changed</h3>
+          <p style="max-width:620px;margin:0 auto;line-height:1.55;">
+            • Browser zoom must stay at <b>100&nbsp;%</b>.<br>
+            The experiment is paused and will resume automatically once
+            everything is back within limits.
+          </p>
+        </div>`;
+        document.body.appendChild(overlay);
+      }
+      function hide() {
+        if (overlay) { document.body.removeChild(overlay); overlay = null; }
+      }
+
+      /* ── watcher ── */
+      let paused = false;
+      function watch() {
+        /* if user manually exited fullscreen, let the fullscreen-guard handle things */
+        if (!document.fullscreenElement) return;
+
+        if (!ok()) {
+          if (!paused) {
+            paused = true;
+            window.demoPaused = true;     /*  ←  makes pauseAwareTimeout freeze  */
+            jsPsych.pauseExperiment();    /*  ←  stops timeline  */
+            show();
+          }
+        } else if (paused) {
+          hide();
+          paused = false;
+          window.demoPaused = false;
+          jsPsych.resumeExperiment();
+        }
+      }
+
+      /* react to any size change and poll every 500 ms */
+      window.addEventListener('resize', watch);
+      window.addEventListener('orientationchange', watch);
+      setInterval(watch, 500);
+      watch();                 /* initial check */
+    }
+  </script>
+
+  <!-- ---------- tiny trial that starts guard right after loop -------- -->
+  <script>
+    const zoomGuardStarter = {
+      type: jsPsychCallFunction,
+      func: () => startZoomGuard()
+    };
+  </script>
+
+  <script>
+    /* ------------------------------------------------------------------
+     * Disqualify notice + ONE-SHOT upload
+     * ----------------------------------------------------------------*/
+    function showDisqualifyPage(reason = "verification_fail") {
+
+      /* ===== 1)  SEND minimal payload ===== */
+      /* make sure the constant exists somewhere global */
+      const AWS_ENDPOINT = "https://i7nc0ict3h.execute-api.ap-southeast-1.amazonaws.com/storedata";
+
+      /* build payload exactly as Lambda expects */
+      fetch(AWS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participantID: window.participantID || Date.now().toString(),
+          disqualified: true,          // <-- Lambda early-exit flag
+          reason,                              // "resolution_fail", etc.
+          demoVideoWatchTime: 0              // REQUIRED: always 0 for fails
+          /* you can add more context fields here if you wish */
+        })
+      }).catch(err => console.error("DQ upload error:", err));
+
+      /* ===== 2)  Replace the DOM with ‘fail’ page ===== */
+      document.body.innerHTML = `
+    <style>
+      body{margin:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif}
+      #dq-wrap{max-width:680px;margin:14vh auto;background:#fff;border-radius:12px;
+               box-shadow:0 8px 28px rgba(0,0,0,.12);padding:50px 60px 60px;text-align:center}
+      #dq-wrap h2{margin-top:0;font-size:28px;color:#d9534f}
+      #dq-wrap p{font-size:18px;line-height:1.5;margin:22px 0 36px;color:#333}
+      #dq-close{padding:12px 46px;font-size:20px;border:none;border-radius:6px;
+                background:#d9534f;color:#fff;cursor:pointer}
+      #dq-close:hover{opacity:.9}
+    </style>
+
+    <div id="dq-wrap">
+      <h2>Device requirements not met</h2>
+      <p>
+        Your monitor size / resolution is outside the limits for this experiment.<br>
+        The HIT associated with this session will unfortunately be <strong>rejected</strong>.<br>
+        You may close this page now.
+      </p>
+      <button id="dq-close">Close</button>
+    </div>`;
+
+      /* close the tab / window when the user clicks Close */
+      document.getElementById("dq-close").onclick = () => {
+        window.open('', '_self');   // mark tab as “script-opened”
+        window.close();
+      };
+    }
+  </script>
+
+  <!-- ================= 4) Display-Verification Page ================== -->
+  <script>
+    /* helper for PASS / FAIL badge */
+    function badge(ok) {
+      return ok
+        ? '<span style="color:#28a745;font-weight:bold;">PASS</span>'
+        : '<span style="color:#dc3545;font-weight:bold;">FAIL</span>';
+    }
+
+    var verificationPage = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: function () {
+
+        /* ── gather numbers ───────────────────────────── */
+        const dpr = window.devicePixelRatio || 1,
+          swCss = screen.width, shCss = screen.height,
+          vw = innerWidth, vh = innerHeight,
+          swPhy = Math.round(swCss * dpr),
+          shPhy = Math.round(shCss * dpr);
+
+        const ok2k = (swPhy >= 2500 && swPhy <= 2620) &&
+          (shPhy >= 1400 && shPhy <= 1650),
+          okDPR = (dpr >= 1.20 && dpr <= 1.30),
+          resOK = ok2k && okDPR;
+
+        /* ── build the HTML ───────────────────────────── */
+        let html = `
+        <h2 style="text-align:center;margin-top:10px;">Display&nbsp;Verification</h2>
+
+        <table style="margin:0 auto;font-size:18px;line-height:1.4;">
+          <tr><td><b>Device resolution&nbsp;(physical)</b></td><td>${swPhy}&nbsp;×&nbsp;${shPhy}&nbsp;px</td></tr>
+          <tr><td><b>Browser viewport&nbsp;(CSS)</b></td><td>${vw}&nbsp;×&nbsp;${vh}&nbsp;px</td></tr>
+          <tr><td><b>OS scaling factor</b></td><td>${dpr.toFixed(2)}&nbsp;(~${Math.round(dpr * 100)}&nbsp;%)</td></tr>
+        </table>
+
+        <p style="text-align:center;font-size:22px;margin:20px 0;">
+          Resolution&nbsp;status&nbsp;:&nbsp;${badge(resOK)}
+        </p>
+
+        <p style="max-width:800px;margin:0 auto 40px;font-size:17px;text-align:left;">
+          We require a 2560&nbsp;×&nbsp;1440/1600 monitor (≈16&nbsp;inch) at
+          <b>125&nbsp;% OS scaling</b> and <b>100&nbsp;% browser zoom</b>.
+        </p>`;
+
+        /* ── credit-card calibration only if resolution passed ── */
+        if (resOK) {
+          html += `
+          <hr style="margin:0 0 30px;">
+
+          <div style="max-width:900px;margin:0 auto;text-align:left;">
+            <p style="font-size:20px;font-weight:700;">Physical-size calibration</p>
+            <p style="margin-top:0;">
+              Hold a real credit&nbsp;card and drag the slider until the
+              <span style="font-weight:700;color:#555;">grey card</span>
+              matches its width.
+            </p>
+          </div>
+
+          <div id="card-holder" style="display:flex;justify-content:center;">
+            <div id="card-block"
+                 style="width:500px;height:315px;background:#dedede;border:1px solid #999;border-radius:8px;">
+            </div>
+          </div>
+
+          <!-- start small (120 px) so user must enlarge it -->
+          <input id="card-slider" type="range" min="80" max="700" value="120"
+                 style="width:90%;display:block;margin:30px auto 0;">
+
+          <div style="text-align:center;margin-top:32px;">
+            <button id="card-check"
+                    style="padding:10px 34px;font-size:18px;border:none;border-radius:4px;
+                           background:#0d6efd;color:#fff;cursor:pointer;">
+              Check size
+            </button>
+            <!-- centred PASS / FAIL message -->
+            <p id="card-msg"
+               style="margin-top:12px;font-size:18px;font-weight:700;display:block;width:100%;text-align:center;">
+            </p>
+          </div>`;
+        }
+        return html;
+      },
+
+      choices: ['Continue'],
+
+      on_load: function () {
+
+        const contBtn = document.querySelector('.jspsych-btn'),
+          failClr = '#d9534f', passClr = '#5cb85c';
+
+        /* quick exit if resolution already failed */
+        const dpr = window.devicePixelRatio || 1,
+          resOK = (screen.width * dpr >= 2500 && screen.width * dpr <= 2620) &&
+            (screen.height * dpr >= 1400 && screen.height * dpr <= 1650) &&
+            (dpr >= 1.20 && dpr <= 1.30);
+
+        if (!resOK) {
+          contBtn.textContent = 'Exit';
+          contBtn.style.background = failClr;
+          contBtn.onclick = () => showDisqualifyPage();   // back to start for res-fail
+          return;
+        }
+
+        /* ----- calibration widgets ----- */
+        const ASPECT = 85.6 / 53.98;                   // ID-1 credit-card W/H
+        const slide = document.getElementById('card-slider'),
+          card = document.getElementById('card-block'),
+          check = document.getElementById('card-check'),
+          msg = document.getElementById('card-msg');
+
+        function updateCard() {
+          const w = +slide.value;
+          card.style.width = w + 'px';
+          card.style.height = (w / ASPECT) + 'px';
+        }
+        slide.oninput = updateCard;
+        updateCard();                                  // initial small card
+
+        contBtn.disabled = true;
+        contBtn.style.opacity = '.4';
+
+        check.onclick = () => {
+          const pxW = +slide.value,
+            mmPerPx = 85.6 / pxW,
+            inPerPx = mmPerPx / 25.4,
+            diagPx = Math.hypot(screen.width, screen.height),
+            diagIn = diagPx * inPerPx;
+
+          if (diagIn >= 15.5 && diagIn <= 16.5) {
+            msg.textContent = `PASS – estimated diagonal ${diagIn.toFixed(1)}″`;
+            msg.style.color = passClr;
+            contBtn.textContent = 'Continue';
+            contBtn.style.background = passClr;
+            contBtn.disabled = false;
+            contBtn.style.opacity = '1';
+          } else {
+            msg.textContent = `FAIL – estimated diagonal ${diagIn.toFixed(1)}″`;
+            msg.style.color = failClr;
+            contBtn.textContent = 'Quit';
+            contBtn.style.background = failClr;
+            contBtn.disabled = false;
+            contBtn.style.opacity = '1';
+            contBtn.onclick = () => showDisqualifyPage();
+          }
+          slide.disabled = true;                 // freeze slider
+          check.disabled = true;                 // disable “Check size” button
+          check.style.opacity = '.5';
+        };
+      }
+    };
+  </script>
+
 
   <script>
     /*************** 2) Demo Instructions Page ***************/
@@ -444,10 +696,10 @@
         </div>
       `,
       choices: ['Start DEMO'],
-      on_load: function() {
+      on_load: function () {
         var btn = document.querySelector(".jspsych-btn");
         btn.disabled = true;
-        document.getElementById("demo-confirm").addEventListener("change", function() {
+        document.getElementById("demo-confirm").addEventListener("change", function () {
           btn.disabled = !this.checked;
         });
       }
@@ -456,9 +708,9 @@
 
   <script>
     /*************** 2.5) Demo Video Page ***************/
-var demoVideoTrial = {
-  type: jsPsychHtmlButtonResponse,
-  stimulus: `
+    var demoVideoTrial = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
     <h2 style="text-align:center; margin-top:10px;">Instructional Video</h2>
     <div style="max-width:1200px; margin:0 auto; text-align:center;">
       <video id="demo-video" controls style="width:100%; height:auto; margin-top:10px;">
@@ -470,46 +722,46 @@ var demoVideoTrial = {
       You can skip ahead or scrub through the video at any time.
     </p>
   `,
-  choices: ['Continue'],
-  on_load: function() {
-    const btn = document.querySelector('.jspsych-btn');
-    btn.disabled = false;    // immediate enable
+      choices: ['Continue'],
+      on_load: function () {
+        const btn = document.querySelector('.jspsych-btn');
+        btn.disabled = false;    // immediate enable
 
-    const video = document.getElementById('demo-video');
-    let playStart = null;
-    demoVideoWatchTime = 0;  // reset accumulator
+        const video = document.getElementById('demo-video');
+        let playStart = null;
+        demoVideoWatchTime = 0;  // reset accumulator
 
-    // When video starts or resumes playing
-    video.addEventListener('play', () => {
-      // record when this play segment began
-      playStart = Date.now();
-    });
+        // When video starts or resumes playing
+        video.addEventListener('play', () => {
+          // record when this play segment began
+          playStart = Date.now();
+        });
 
-    // When video is paused or user seeks
-    function accumulate() {
-      if (playStart !== null) {
-        // add the elapsed seconds since playStart
-        demoVideoWatchTime += (Date.now() - playStart) / 1000;
-        playStart = null;
+        // When video is paused or user seeks
+        function accumulate() {
+          if (playStart !== null) {
+            // add the elapsed seconds since playStart
+            demoVideoWatchTime += (Date.now() - playStart) / 1000;
+            playStart = null;
+          }
+        }
+        video.addEventListener('pause', accumulate);
+        video.addEventListener('seeking', accumulate);
+
+        // When video ends naturally
+        video.addEventListener('ended', () => {
+          accumulate();         // add the last segment
+          // demoVideoWatchTime now holds total watched seconds
+          console.log('Total watched (s):', demoVideoWatchTime);
+        });
+
+        // Also catch the Continue click if they skip before ending
+        btn.addEventListener('click', () => {
+          accumulate();         // add any current segment
+          console.log('Final watched (s):', demoVideoWatchTime);
+        });
       }
-    }
-    video.addEventListener('pause', accumulate);
-    video.addEventListener('seeking', accumulate);
-
-    // When video ends naturally
-    video.addEventListener('ended', () => {
-      accumulate();         // add the last segment
-      // demoVideoWatchTime now holds total watched seconds
-      console.log('Total watched (s):', demoVideoWatchTime);
-    });
-
-    // Also catch the Continue click if they skip before ending
-    btn.addEventListener('click', () => {
-      accumulate();         // add any current segment
-      console.log('Final watched (s):', demoVideoWatchTime);
-    });
-  }
-};
+    };
 
   </script>
 
@@ -520,7 +772,7 @@ var demoVideoTrial = {
       stimulus: '<div id="dynamic-demo-container"></div>',
       choices: ['YES'],
       response_ends_trial: false,
-      on_load: function() {
+      on_load: function () {
         var btn = document.querySelector(".jspsych-btn");
         var yesBtnContainer = document.getElementById('yes-button-container');
         yesBtnContainer.appendChild(btn);
@@ -658,12 +910,12 @@ var demoVideoTrial = {
               </div>
             </div>
           `;
-          document.getElementById("yes-button-container").style.display = "block";  
-          btn.style.display = "inline-block";  
-          btn.disabled = false;  
-          btn.style.opacity = "1";  
+          document.getElementById("yes-button-container").style.display = "block";
+          btn.style.display = "inline-block";
+          btn.disabled = false;
+          btn.style.opacity = "1";
           // First update: 3000ms → 2000ms  
-          pauseAwareTimeout(nextImage, 2000);  
+          pauseAwareTimeout(nextImage, 2000);
         }
 
         /* -------------- MODIFIED CLICK HANDLER -------------- */
@@ -716,7 +968,7 @@ var demoVideoTrial = {
         </p>
       `,
       choices: ['Redo DEMO', 'START ACTUAL EXPERIMENT'],
-      on_finish: function() { /* Loop handled in timeline */ }
+      on_finish: function () { /* Loop handled in timeline */ }
     };
   </script>
 
@@ -724,7 +976,7 @@ var demoVideoTrial = {
     /*************** 5) Experiment Instructions Page ***************/
     var experimentInstructions = {
       type: jsPsychHtmlButtonResponse,
-      stimulus: function() {
+      stimulus: function () {
         window.selectedObject = getRandomElement(objectNames);
         window.selectedGroupKey = getRandomElement(Object.keys(groups));
         var props = groups[window.selectedGroupKey];
@@ -780,7 +1032,7 @@ var demoVideoTrial = {
         var properties = groups[window.selectedGroupKey];
         var totalSets = properties.length * 4;
         window.completedSets = 0;
-        window.updateProgressCircle = function() {
+        window.updateProgressCircle = function () {
           var angle = ((totalSets - window.completedSets) / totalSets) * 360;
           document.getElementById("progress-circle").style.background =
             `conic-gradient(#4CAF50 0deg, #4CAF50 ${angle}deg, #ccc ${angle}deg, #ccc 360deg)`;
@@ -806,7 +1058,7 @@ var demoVideoTrial = {
           var selectedProperty = properties[index];
           var searchKey = window.selectedObject + "_" + selectedProperty;
           console.log("Running experiment for key:", searchKey);
-          runDirectionalExperiment(searchKey, selectedProperty, function(phaseResults, filenames) {
+          runDirectionalExperiment(searchKey, selectedProperty, function (phaseResults, filenames) {
             experimentResults.push({
               property: selectedProperty,
               phaseResults: phaseResults,
@@ -837,7 +1089,7 @@ var demoVideoTrial = {
             else { loadingBar.style.width = progress + "%"; }
           }, 100);
 
-          fetchImageFilenames(searchKey).then(function(fileNames) {
+          fetchImageFilenames(searchKey).then(function (fileNames) {
             if (fileNames.length === 0) {
               container.innerHTML = "<p>No matching images found for key: " + searchKey + ".</p>";
               callback({}, []); return;
@@ -850,34 +1102,34 @@ var demoVideoTrial = {
             fileNames = fileNames.slice(0, 401);
 
             // Split into original + 4 directions
-            var originalFilename   = fileNames[0];
-            var leftFilenamesAll   = fileNames.slice(1, 101);
-            var rightFilenamesAll  = fileNames.slice(101, 201);
-            var upFilenamesAll     = fileNames.slice(201, 301);
-            var downFilenamesAll   = fileNames.slice(301, 401);
+            var originalFilename = fileNames[0];
+            var leftFilenamesAll = fileNames.slice(1, 101);
+            var rightFilenamesAll = fileNames.slice(101, 201);
+            var upFilenamesAll = fileNames.slice(201, 301);
+            var downFilenamesAll = fileNames.slice(301, 401);
 
             // Prepare per-phase filename arrays (including original at index 0)
             const phases = [
-              { direction: "L", label: "LEFT",  filenames: [originalFilename].concat(leftFilenamesAll) },
+              { direction: "L", label: "LEFT", filenames: [originalFilename].concat(leftFilenamesAll) },
               { direction: "R", label: "RIGHT", filenames: [originalFilename].concat(rightFilenamesAll) },
-              { direction: "U", label: "UP",    filenames: [originalFilename].concat(upFilenamesAll) },
-              { direction: "D", label: "DOWN",  filenames: [originalFilename].concat(downFilenamesAll) }
+              { direction: "U", label: "UP", filenames: [originalFilename].concat(upFilenamesAll) },
+              { direction: "D", label: "DOWN", filenames: [originalFilename].concat(downFilenamesAll) }
             ];
 
             const baseImageURL = "https://lasvientuexperimentdata.s3.ap-southeast-1.amazonaws.com/Rendered+Images/";
-            const INITIAL_CACHE_SIZE  = 5;  // preload first 10 shifts + original
-            const PREFETCH_THRESHOLD  = 2;   // when within 5 of cache end, fetch more
-            const PREFETCH_SIZE       = 2;   // fetch 5 more each time
+            const INITIAL_CACHE_SIZE = 5;  // preload first 10 shifts + original
+            const PREFETCH_THRESHOLD = 2;   // when within 5 of cache end, fetch more
+            const PREFETCH_SIZE = 2;   // fetch 5 more each time
 
             var currentPhaseIndex = 0;
             var currentImageIndex = 0;
-            var phaseResults      = {};
+            var phaseResults = {};
             var highestLoadedIndex = 0;  // track how many we've preloaded
 
             // Utility to preload a set of indices for the current phase
             function preloadImages(indices) {
               var fnames = phases[currentPhaseIndex].filenames;
-              indices.forEach(function(i) {
+              indices.forEach(function (i) {
                 var img = new Image();
                 img.src = baseImageURL + encodeURIComponent(fnames[i]);
               });
@@ -1005,10 +1257,10 @@ var demoVideoTrial = {
 
                   // prefetch if within threshold
                   if (currentImageIndex + PREFETCH_THRESHOLD > highestLoadedIndex &&
-                      highestLoadedIndex < phase.filenames.length - 1) {
+                    highestLoadedIndex < phase.filenames.length - 1) {
                     var start = highestLoadedIndex + 1;
-                    var end   = Math.min(highestLoadedIndex + PREFETCH_SIZE, phase.filenames.length - 1);
-                    var more  = [];
+                    var end = Math.min(highestLoadedIndex + PREFETCH_SIZE, phase.filenames.length - 1);
+                    var more = [];
                     for (var j = start; j <= end; j++) more.push(j);
                     preloadImages(more);
                     highestLoadedIndex = end;
@@ -1065,9 +1317,9 @@ var demoVideoTrial = {
         </div>
       `,
       choices: ['Submit Data'],
-      on_finish: function() {
+      on_finish: function () {
         var jsPsychDataArray = jsPsych.data.get().values();
-        var trialSummary = jsPsychDataArray.map(function(trial) {
+        var trialSummary = jsPsychDataArray.map(function (trial) {
           return {
             trialIndex: trial.trial_index,
             trialType: trial.trial_type,
@@ -1095,13 +1347,13 @@ var demoVideoTrial = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(finalPayload)
         })
-        .then(response => response.json())
-        .then(result => {
-          console.log("Data posted successfully:", result);
-        })
-        .catch(error => {
-          console.error("Error posting data:", error);
-        });
+          .then(response => response.json())
+          .then(result => {
+            console.log("Data posted successfully:", result);
+          })
+          .catch(error => {
+            console.error("Error posting data:", error);
+          });
       }
     };
   </script>
@@ -1140,6 +1392,9 @@ var demoVideoTrial = {
      *********************************************************/
     var timeline = [];
     timeline.push(welcomePage);
+    timeline.push(zoomCheckLoop);      /* Browser-zoom fixed */
+    timeline.push(zoomGuardStarter);   /* ★ MOD guard starts */
+    timeline.push(verificationPage);   /* Display check */
 
     // DEMO Timeline with new video watch time tracking
     var demoTimeline = {
@@ -1149,7 +1404,7 @@ var demoVideoTrial = {
         dynamicDemoTrial,
         demoCompleteTrial
       ],
-      loop_function: function(data) {
+      loop_function: function (data) {
         var last_trial = data.values()[data.values().length - 1];
         // If last trial button was 'Redo DEMO' (response == 0), repeat
         return last_trial.response === 0;
@@ -1165,4 +1420,5 @@ var demoVideoTrial = {
     jsPsych.run(timeline);
   </script>
 </body>
+
 </html>
