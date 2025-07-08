@@ -459,8 +459,6 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           participantID: window.participantID || Date.now().toString(),
-          disqualified: true,          // <-- Lambda early-exit flag
-          reason,                              // "resolution_fail", etc.
           demoVideoWatchTime: 0              // REQUIRED: always 0 for fails
           /* you can add more context fields here if you wish */
         })
