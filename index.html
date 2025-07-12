@@ -1273,32 +1273,50 @@
           showFrame();
         };
 
+        /* ----------  SHOW ONE FRAME  ---------- */
         const showFrame = () => {
           const phase = phases[phaseIdx];
           const fname = phase.filenames[imgIdx];
 
+          /* ── build HTML ───────────────────────────────────── */
           container.innerHTML = `
-            <div id="exp-header" style="text-align:center; margin-top:10px;">
-              <h3>Saliency object will move
-                <span style="font-size:1.5em; text-decoration:underline;">${phase.label}</span>
-              </h3>
-            </div>
-            <div id="exp-content" style="display:flex; justify-content:center; align-items:center;">
-              <div style="margin:5px; text-align:center;">
-                <img id="exp-ref-image"
-                     src="${baseURL + encodeURIComponent(phase.filenames[0])}"
-                     class="demo-image"
-                     style="transform:scale(${scaleFactor}); transform-origin:center;">
-                <br><span>Reference Image</span>
-              </div>
-              <div style="margin:5px; text-align:center;">
-                <img id="exp-shift-image"
-                     src="${baseURL + encodeURIComponent(fname)}"
-                     class="demo-image"
-                     style="visibility:visible; transform:scale(${scaleFactor}); transform-origin:center;">
-                <br><span>Shifted Image</span>
-              </div>
-            </div>`;
+    <div id="exp-header" style="text-align:center;margin-top:10px;">
+      <h3>Saliency object will move
+        <span style="font-size:1.5em;text-decoration:underline;">${phase.label}</span>
+      </h3>
+    </div>
+
+    <div id="exp-content"
+         style="display:flex;justify-content:center;align-items:center;">
+      <div style="margin:5px;text-align:center;">
+        <img id="exp-ref-image"
+             src="${baseURL + encodeURIComponent(phase.filenames[0])}"
+             class="demo-image"
+             style="transform:scale(${scaleFactor});transform-origin:center;">
+        <br><span>Reference Image</span>
+      </div>
+      <div style="margin:5px;text-align:center;">
+        <img id="exp-shift-image"
+             src="${baseURL + encodeURIComponent(fname)}"
+             class="demo-image"
+             style="visibility:visible;transform:scale(${scaleFactor});transform-origin:center;">
+        <br><span>Shifted Image</span>
+      </div>
+    </div>`;
+
+          /* ── 1st time for this scale?  Store displayed size (CSS px) ── */
+          const wKey = `stim_${scaleFactor}_width`;
+          if (!window.stimSizesByScale[wKey]) {
+            /* getBoundingClientRect() INCLUDES transforms → true displayed size */
+            const rect = document
+              .getElementById('exp-ref-image')
+              .getBoundingClientRect();
+            window.stimSizesByScale[wKey] = Math.round(rect.width);
+            window.stimSizesByScale[`stim_${scaleFactor}_height`] =
+              Math.round(rect.height);
+          }
+
+          /* ── enable button & schedule next frame ── */
           btn.disabled = false;
           btn.style.opacity = '1';
           pauseAwareTimeout(advanceFrame, 2000);
