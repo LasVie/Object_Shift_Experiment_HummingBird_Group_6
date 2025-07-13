@@ -144,15 +144,20 @@
       justify-content: center;
     }
 
+    /* ───────────── HIDE VIDEO SEEK / TIME BAR ───────────── */
+    /* Chromium / Edge / Safari */
     video.no-progress::-webkit-media-controls-timeline,
     video.no-progress::-webkit-media-controls-current-time-display,
     video.no-progress::-webkit-media-controls-time-remaining-display {
       display: none !important;
     }
 
-    video.no-progress::-moz-range-track {
+    /* Firefox – hide the timeline and draggable knob */
+    video.no-progress::-moz-range-track,
+    video.no-progress::-moz-range-thumb {
       visibility: hidden !important;
     }
+
 
     /* ---- ZOOM-VIOLATION OVERLAY ---- */
     #zoom-overlay {
@@ -242,7 +247,7 @@
 
     var objectNames = [
       //"Book Shelves", "Chess", "Wheel", "Food Platter", "Fruits", 
-      "Humming Bird", 
+      "Humming Bird",
       //"Plant", "Swing", "Vase", 
       //"Wood"
     ];
@@ -707,19 +712,23 @@
       stimulus: `
     <h2 style="text-align:center; margin-top:10px;">Instructional Video</h2>
     <div style="max-width:1200px; margin:0 auto; text-align:center;">
-      <video id="demo-video" controls style="width:100%; height:auto; margin-top:10px;">
+      <video id="demo-video"
+             class="no-progress"              
+             controls
+             controlsList="nodownload noremoteplayback"
+             style="width:100%; height:auto; margin-top:10px;">
         <source src="data/Demo Video.mp4" type="video/mp4">
         Your browser does not support the video tag.
       </video>
     </div>
     <p style="margin-top:20px; text-align:center;">
-      You can skip ahead or scrub through the video at any time.
+      Please watch the entire video before proceed.
     </p>
   `,
       choices: ['Continue'],
       on_load: function () {
         const btn = document.querySelector('.jspsych-btn');
-        btn.disabled = false;    // immediate enable
+        btn.disabled = true;
 
         const video = document.getElementById('demo-video');
         let playStart = null;
@@ -746,6 +755,7 @@
         video.addEventListener('ended', () => {
           accumulate();         // add the last segment
           // demoVideoWatchTime now holds total watched seconds
+          btn.disabled = false;
           console.log('Total watched (s):', demoVideoWatchTime);
         });
 
@@ -756,7 +766,6 @@
         });
       }
     };
-
   </script>
 
   <script>
