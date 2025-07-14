@@ -409,115 +409,248 @@
     }
   </script>
 
-  <!-- ================= 2) Display-Verification Page ================= -->
+  <!-- ================= 2) DISPLAY-VERIFICATION PAGE  (FULL CODE) ================= -->
   <script>
-    function badge(ok) { return ok ? '<span style="color:#28a745;font-weight:bold;">PASS</span>' : '<span style="color:#dc3545;font-weight:bold;">FAIL</span>' }
+    /* ──────────────────────────────────────────────────────────────────────────────
+     *  GLOBAL HELPERS
+     * ──────────────────────────────────────────────────────────────────────────── */
+    let recheckAttempts = 0;                     // # times “Re-check” pressed
 
-    /* zoom-shortcut blocker (unchanged) */
-    let _zb = null;
-    function installZoomBlocker() { _zb = e => { if ((e.ctrlKey || e.metaKey) && (['+', '=', '-', '_', '0'].includes(e.key) || e.type === 'wheel')) { e.preventDefault(); return false } }; window.addEventListener('keydown', _zb, { passive: false }); window.addEventListener('wheel', _zb, { passive: false }) }
-    function removeZoomBlocker() { if (_zb) { window.removeEventListener('keydown', _zb, { passive: false }); window.removeEventListener('wheel', _zb, { passive: false }); _zb = null } }
+    const badge = ok =>
+      ok
+        ? '<span style="color:#28a745;font-weight:bold;">PASS</span>'
+        : '<span style="color:#dc3545;font-weight:bold;">FAIL</span>';
 
-    var verificationPage = {
+    let _zb = null;                              // zoom-blocker handle
+    function installZoomBlocker() {
+      _zb = e => {
+        if ((e.ctrlKey || e.metaKey) &&
+          (['+', '=', '-', '_', '0'].includes(e.key) || e.type === 'wheel')) {
+          e.preventDefault();
+          return false;
+        }
+      };
+      window.addEventListener('keydown', _zb, { passive: false });
+      window.addEventListener('wheel', _zb, { passive: false });
+    }
+    function removeZoomBlocker() {
+      if (_zb) {
+        window.removeEventListener('keydown', _zb, { passive: false });
+        window.removeEventListener('wheel', _zb, { passive: false });
+        _zb = null;
+      }
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────────
+     *  jsPsych TRIAL  ▸  verificationPage
+     * ──────────────────────────────────────────────────────────────────────────── */
+    const verificationPage = {
       type: jsPsychHtmlButtonResponse,
-      stimulus: function () {
+
+      /* three buttons in this order */
+      choices: ['Re-check', 'Quit', 'Continue'],
+
+      /* jsPsych 7 calls this as a function; older versions accept it too           */
+      /* i  = index (0,1,2)   label = '%choice%' placeholder                         */
+      button_html: function (choice, index) {
+        // red background only for the second button (“Quit”)
+        const style = (index === 1)
+          ? 'style="background:#d9534f;color:#fff;"'
+          : '';
+        return `<button class="jspsych-btn" ${style}>${choice}</button>`;
+      },
+
+      /* ------------------------------------------------------------------------ */
+      stimulus: () => {
         const dpr = window.devicePixelRatio || 1,
-          swCSS = screen.width, shCSS = screen.height,
-          vw = innerWidth, vh = innerHeight,
-          swPhy = Math.round(swCSS * dpr), shPhy = Math.round(shCSS * dpr),
-          ok2k = (swPhy >= 2500 && swPhy <= 2620) && (shPhy >= 1400 && shPhy <= 1650),
+          swCSS = screen.width,
+          shCSS = screen.height,
+          vw = innerWidth,
+          vh = innerHeight,
+          swPhy = Math.round(swCSS * dpr),
+          shPhy = Math.round(shCSS * dpr),
+
+          ok2k = (swPhy >= 2500 && swPhy <= 2620) &&
+            (shPhy >= 1400 && shPhy <= 1650),
           okDPR = (dpr >= 1.20 && dpr <= 1.30),
           winOK = Math.abs(((swCSS * dpr) / vw) - dpr) < 0.02,
           passAll = ok2k && okDPR && winOK;
 
-        let html = `
-      <h2 style="text-align:center;margin-top:10px;">Display&nbsp;Verification</h2>
+        /* extra CSS so the button group is always visible */
+        const style = `
+      <style>
+        #jspsych-html-button-response-btngroup{
+          display:flex !important; justify-content:center !important;
+          gap:24px; margin-top:50px;
+        }
+        .jspsych-content-wrapper{ min-height:650px; }
+        .jspsych-btn{ font-size:18px;padding:10px 32px; }
+      </style>`;
+
+        let html = style + `
+      <h2 style="text-align:center;margin-top:10px;">Display Verification</h2>
+
       <table style="margin:0 auto;font-size:18px;line-height:1.4;">
-        <tr><td><b>Device resolution&nbsp;(physical)</b></td><td>${swPhy} × ${shPhy}&nbsp;px</td></tr>
-        <tr><td><b>Browser viewport&nbsp;(CSS)</b></td><td>${vw} × ${vh}&nbsp;px</td></tr>
-        <tr><td><b>OS scaling factor</b></td><td>${dpr.toFixed(2)}&nbsp;(~${Math.round(dpr * 100)}%)</td></tr>
+        <tr><td><b>Device resolution&nbsp;(physical)</b></td>
+            <td>${swPhy} × ${shPhy}&nbsp;px</td></tr>
+        <tr><td><b>Browser viewport&nbsp;(CSS)</b></td>
+            <td>${vw} × ${vh}&nbsp;px</td></tr>
+        <tr><td><b>OS scaling factor</b></td>
+            <td>${dpr.toFixed(2)}&nbsp;(~${Math.round(dpr * 100)}%)</td></tr>
       </table>
+
       <p style="text-align:center;font-size:22px;margin:20px 0;">
         Resolution&nbsp;status&nbsp;:&nbsp;${badge(passAll)}
       </p>
+
       <p style="max-width:800px;margin:0 auto 40px;font-size:17px;text-align:left;">
         We require a 2560 × 1440/1600 monitor (≈16″) at
-        <b>125 % OS scaling</b> and <b>100 % browser zoom</b>.
+        <b>125&nbsp;% OS scaling</b> and <b>100&nbsp;% browser zoom</b>.
       </p>`;
 
-        if (passAll) {                 /* credit-card slider */
+        /* extra credit-card calibration only if resolution passes */
+        if (passAll) {
           html += `
-      <hr style="margin:0 0 30px;">
-      <div style="max-width:900px;margin:0 auto;text-align:left;">
-        <p style="font-size:20px;font-weight:700;">Physical-size calibration</p>
-        <p>Drag until the <span style="font-weight:700;">grey card</span> matches a real credit&nbsp;card.</p>
-      </div>
-      <div style="display:flex;justify-content:center;">
-        <div id="card-block" style="width:500px;height:315px;background:#dedede;border:1px solid #999;border-radius:8px;"></div>
-      </div>
-      <input id="card-slider" type="range" min="80" max="700" value="120"
-             style="width:90%;display:block;margin:30px auto 0;">
-      <div style="text-align:center;margin-top:32px;">
-        <button id="card-check"
-                style="padding:10px 34px;font-size:18px;border:none;border-radius:4px;background:#0d6efd;color:#fff;cursor:pointer;">
-          Check size
-        </button>
-        <p id="card-msg" style="margin-top:12px;font-size:18px;font-weight:700;"></p>
-      </div>`;
+        <hr style="margin:0 0 30px;">
+        <div style="max-width:900px;margin:0 auto;text-align:left;">
+          <p style="font-size:20px;font-weight:700;">Physical-size calibration</p>
+          <p>Drag until the <span style="font-weight:700;">grey card</span>
+             matches a real credit&nbsp;card.</p>
+        </div>
+
+        <div style="display:flex;justify-content:center;">
+          <div id="card-block"
+               style="width:500px;height:315px;background:#dedede;
+                      border:1px solid #999;border-radius:8px;"></div>
+        </div>
+
+        <input id="card-slider" type="range" min="80" max="700" value="120"
+               style="width:90%;display:block;margin:30px auto 0;">
+
+        <div style="text-align:center;margin-top:32px;">
+          <button id="card-check"
+                  style="padding:10px 34px;font-size:18px;border:none;border-radius:4px;
+                         background:#0d6efd;color:#fff;cursor:pointer;">
+            Check size
+          </button>
+          <p id="card-msg" style="margin-top:12px;font-size:18px;font-weight:700;"></p>
+        </div>`;
         }
+
         return html;
       },
-      choices: ['Re-check', 'Continue'],
-      on_load: function () {
+
+      /* ------------------------------------------------------------------------ */
+      on_load: () => {
         installZoomBlocker();
 
+        /* re-eval pass/fail for logic here */
         const dpr = window.devicePixelRatio || 1,
           swCSS = screen.width,
-          swPhy = Math.round(swCSS * dpr), shPhy = Math.round(screen.height * dpr),
-          ok2k = (swPhy >= 2500 && swPhy <= 2620) && (shPhy >= 1400 && shPhy <= 1650),
+          swPhy = Math.round(swCSS * dpr),
+          shPhy = Math.round(screen.height * dpr),
+          ok2k = (swPhy >= 2500 && swPhy <= 2620) &&
+            (shPhy >= 1400 && shPhy <= 1650),
           okDPR = (dpr >= 1.20 && dpr <= 1.30),
-          passAll = ok2k && okDPR && Math.abs(((swCSS * dpr) / innerWidth) - dpr) < 0.02;
+          passAll = ok2k && okDPR &&
+            Math.abs(((swCSS * dpr) / innerWidth) - dpr) < 0.02;
 
-        const btns = document.querySelectorAll('.jspsych-btn'),
-          reBtn = btns[0], contBtn = btns[1];
-        if (passAll) reBtn.style.display = 'none'; else { contBtn.disabled = true; contBtn.style.opacity = '.4' }
+        const [reBtn, quitBtn, contBtn] =
+          document.querySelectorAll('.jspsych-btn');
 
-        if (passAll) {
-          const ASPECT = 85.6 / 53.98, slide = document.getElementById('card-slider'),
-            card = document.getElementById('card-block'),
-            check = document.getElementById('card-check'), msg = document.getElementById('card-msg');
+        /* Quit always disqualifies */
+        quitBtn.onclick = () => showDisqualifyPage();
 
-          slide.oninput = () => { card.style.width = slide.value + 'px'; card.style.height = (slide.value / ASPECT) + 'px' };
-          slide.oninput(); contBtn.disabled = true; contBtn.style.opacity = '.4';
+        /* ---------------- RESOLUTION FAIL ---------------- */
+        if (!passAll) {
+          contBtn.disabled = true;
+          contBtn.style.opacity = '.4';
 
-          check.onclick = () => {
-            const mmPerPx = 85.6 / slide.value, diagIn = Math.hypot(screen.width, screen.height) * (mmPerPx / 25.4),
-              ok = (diagIn >= 15.5 && diagIn <= 16.5), clr = ok ? '#28a745' : '#d9534f';
-            msg.textContent = ok
-              ? `PASS – ${diagIn.toFixed(1)}″`
-              : `FAIL – ${diagIn.toFixed(1)}″`;
-
-            /* centre the line */
-            msg.style.textAlign = 'center';   // horizontal
-            msg.style.display = 'block';
-            msg.style.width = '100%';
-            msg.style.color = clr; contBtn.textContent = ok ? 'Continue' : 'Quit'; contBtn.style.background = clr;
-            contBtn.disabled = false; contBtn.style.opacity = '1';
-            if (!ok) contBtn.onclick = () => showDisqualifyPage();
-            slide.disabled = true; check.disabled = true; check.style.opacity = '.5';
-          };
+          if (recheckAttempts >= 2) {
+            reBtn.disabled = true;
+            reBtn.style.opacity = '.4';
+          }
+          return;
         }
-      },
-      on_finish: function (data) { removeZoomBlocker(); data.clicked = data.response; }
-    };
-  </script>
 
-  <script>
-    var verificationLoop = {
+        /* ---------------- RESOLUTION PASS ---------------- */
+        reBtn.style.display = 'none';
+        quitBtn.style.display = 'none';
+
+        const ASPECT = 85.6 / 53.98,
+          slide = document.getElementById('card-slider'),
+          card = document.getElementById('card-block'),
+          check = document.getElementById('card-check'),
+          msg = document.getElementById('card-msg');
+
+        slide.oninput = () => {
+          card.style.width = slide.value + 'px';
+          card.style.height = (slide.value / ASPECT) + 'px';
+        };
+        slide.oninput();
+
+        contBtn.disabled = true;
+        contBtn.style.opacity = '.4';
+
+        check.onclick = () => {
+          const mmPerPx = 85.6 / slide.value,
+            diagIn = Math.hypot(screen.width, screen.height) *
+              (mmPerPx / 25.4),
+            ok = (diagIn >= 15.5 && diagIn <= 16.5),
+            clr = ok ? '#28a745' : '#d9534f';
+
+          msg.textContent = ok
+            ? `PASS – ${diagIn.toFixed(1)}″`
+            : `FAIL – ${diagIn.toFixed(1)}″`;
+          msg.style.color = clr;
+
+          contBtn.textContent = ok ? 'Continue' : 'Quit';
+          contBtn.style.background = clr;
+          contBtn.disabled = false;
+          contBtn.style.opacity = '1';
+
+          if (!ok) contBtn.onclick = () => showDisqualifyPage();
+
+          slide.disabled = true;
+          check.disabled = true;
+          check.style.opacity = '.5';
+        };
+      },
+
+      /* ------------------------------------------------------------------------ */
+      /* ---------------- on-finish handler ---------------- */
+      on_finish: data => {
+        // always stop blocking zoom shortcuts
+        removeZoomBlocker();
+
+        /* --------------------------------------------------
+         * 0  = participant clicked the first button
+         *      (“Re-check”, by construction in choices[])
+         * -------------------------------------------------- */
+        if (data.response === 0) {
+          recheckAttempts++;          // count this attempt
+
+          /* after the 2nd Re-check → treat as an outright fail
+             (same outcome as pressing “Quit”) */
+          if (recheckAttempts >= 2) {
+            showDisqualifyPage();     // send them to the fail page
+            return;                   // skip storing more data
+          }
+        }
+
+        /* store which button they clicked (for your own logs) */
+        data.clicked = data.response;
+      }
+    };
+
+    /* ──────────────────────────────────────────────────────────────────────────────
+     *  LOOP ALLOWING UP TO TWO “RE-CHECK” ATTEMPTS
+     * ──────────────────────────────────────────────────────────────────────────── */
+    const verificationLoop = {
       timeline: [verificationPage],
-      loop_function: function (data) {
-        const last = data.values().at(-1);     // clicked === 0 → Re-check
-        return last.clicked === 0;
+      loop_function: data => {
+        const last = data.values().at(-1);
+        return last.clicked === 0 && recheckAttempts < 2;   // 0 = “Re-check”
       }
     };
   </script>
