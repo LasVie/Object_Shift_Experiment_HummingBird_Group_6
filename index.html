@@ -462,19 +462,24 @@
 
       /* ------------------------------------------------------------------------ */
       stimulus: () => {
+        // ───────── inside verificationPage.stimulus (and again in on_load) ─────────
         const dpr = window.devicePixelRatio || 1,
           swCSS = screen.width,
           shCSS = screen.height,
           vw = innerWidth,
           vh = innerHeight,
-          swPhy = Math.round(swCSS * dpr),
-          shPhy = Math.round(shCSS * dpr),
+          swPhy = Math.round(swCSS * dpr),   // physical pixels
+          shPhy = Math.round(shCSS * dpr);
 
-          ok2k = (swPhy >= 2500 && swPhy <= 2620) &&
-            (shPhy >= 1400 && shPhy <= 1650),
-          okDPR = (dpr >= 1.20 && dpr <= 1.30),
-          winOK = Math.abs(((swCSS * dpr) / vw) - dpr) < 0.02,
-          passAll = ok2k && okDPR && winOK;
+        // 👇 NEW tolerance band for a 1920 × 1080 panel
+        const ok1080 = (swPhy >= 1880 && swPhy <= 1960) &&   // allow ±40 px
+          (shPhy >= 1040 && shPhy <= 1120);
+
+        // keep the old DPR test exactly as‑is
+        const okDPR = (dpr >= 1.20 && dpr <= 1.30);
+
+        const winOK = Math.abs(((swCSS * dpr) / innerWidth) - dpr) < 0.02;
+        const passAll = ok1080 && okDPR && winOK;
 
         /* extra CSS so the button group is always visible */
         const style = `
@@ -504,8 +509,8 @@
       </p>
 
       <p style="max-width:800px;margin:0 auto 40px;font-size:17px;text-align:left;">
-        We require a 2560 × 1440/1600 monitor (≈16″) at
-        <b>125&nbsp;% OS scaling</b> and <b>100&nbsp;% browser zoom</b>.
+        We require a 1920 × 1080 monitor (≈ 15.6″) at
+        <b>125 % OS scaling</b> and <b>100 % browser zoom</b>.
       </p>`;
 
         /* extra credit-card calibration only if resolution passes */
@@ -545,15 +550,19 @@
         installZoomBlocker();
 
         /* re-eval pass/fail for logic here */
+        /* re‑eval pass/fail for logic here */
         const dpr = window.devicePixelRatio || 1,
           swCSS = screen.width,
+          shCSS = screen.height,
           swPhy = Math.round(swCSS * dpr),
-          shPhy = Math.round(screen.height * dpr),
-          ok2k = (swPhy >= 2500 && swPhy <= 2620) &&
-            (shPhy >= 1400 && shPhy <= 1650),
+          shPhy = Math.round(shCSS * dpr),
+
+          ok1080 = (swPhy >= 1880 && swPhy <= 1960) &&
+            (shPhy >= 1040 && shPhy <= 1120),
           okDPR = (dpr >= 1.20 && dpr <= 1.30),
-          passAll = ok2k && okDPR &&
-            Math.abs(((swCSS * dpr) / innerWidth) - dpr) < 0.02;
+          winOK = Math.abs(((swCSS * dpr) / innerWidth) - dpr) < 0.02,
+
+          passAll = ok1080 && okDPR && winOK;
 
         const [reBtn, quitBtn, contBtn] =
           document.querySelectorAll('.jspsych-btn');
@@ -596,7 +605,7 @@
           const mmPerPx = 85.6 / slide.value,
             diagIn = Math.hypot(screen.width, screen.height) *
               (mmPerPx / 25.4),
-            ok = (diagIn >= 15.5 && diagIn <= 16.5),
+            ok = (diagIn >= 15.3 && diagIn <= 15.9),
             clr = ok ? '#28a745' : '#d9534f';
 
           msg.textContent = ok
@@ -709,19 +718,20 @@
       function ok() {
         const dpr = window.devicePixelRatio || 1;
 
-        /* browser zoom   (≈100 % ±5 %)  */
+        /* browser zoom   (≈100 % ±5 %) */
         const zoomPct = (dpr / 1.25) * 100;
         const zoomOK = zoomPct >= 95 && zoomPct <= 105;
 
-        /* monitor native res @ 125 % OS-scaling */
+        /* NEW resolution limits */
         const sw = Math.round(screen.width * dpr);
         const sh = Math.round(screen.height * dpr);
-        const resOK = (sw >= 2500 && sw <= 2620) &&
-          (sh >= 1400 && sh <= 1650) &&
+        const resOK = (sw >= 1880 && sw <= 1960) &&
+          (sh >= 1040 && sh <= 1120) &&
           (dpr >= 1.20 && dpr <= 1.30);
 
         return zoomOK && resOK;
       }
+
 
       /* ── overlay (no buttons) ── */
       let overlay = null;
